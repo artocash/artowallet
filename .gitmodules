@@ -1,0 +1,6 @@
+[submodule "cryptonote"]
+	path = cryptonote
+	url = https://github.com/artocash/arto.git
+[submodule "libqrencode"]
+	path = libqrencode
+	url = https://github.com/fukuchi/libqrencode.git
