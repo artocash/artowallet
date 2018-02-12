@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Arto
+GenericName=Arto wallet
+CommentArto wallet
+Exec=artowallet %U
+Terminal=false
+Type=Application
+Icon=artowallet
+MimeType=x-scheme-handler/artowallet;
+Categories=Office;Finance;
+Version=1.0.1
