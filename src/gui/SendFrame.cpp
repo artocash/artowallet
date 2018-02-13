@@ -124,8 +124,8 @@ void SendFrame::amountValueChange() {
         if (remote_node_fee < CurrencyAdapter::instance().getMinimumFee()) {
             remote_node_fee = CurrencyAdapter::instance().getMinimumFee();
         }
-        if (remote_node_fee > 10000000000000) {
-            remote_node_fee = 10000000000000;
+        if (remote_node_fee > 1000000000) {
+            remote_node_fee = 1000000000;
         }
     }
 
@@ -258,7 +258,7 @@ void SendFrame::sendClicked() {
       // Dev donation
       if (m_ui->donateCheckBox->isChecked()) {
           CryptoNote::WalletLegacyTransfer walletTransfer;
-          walletTransfer.address = "AJP6dDn9qqT92NRA8UNVzDZT5jMqPSsFL91TK4s6jKjfDbNNBdz8mZvNNKzRx8FvRpX8o5HK8RimedLMRC7uboF99LkR42H";
+          walletTransfer.address = "AHmvh4Yf9eNdexPVyYexi4K5HSxUbWPFNBuxdHEfYK3G5eWKpfJEUWuNH7TEvxfHki9b5uwzLTGzg9aq8MhAK6uBEaj8TPm";
           walletTransfer.amount = CurrencyAdapter::instance().parseAmount(m_ui->m_donateSpin->cleanText());
           walletTransfers.push_back(walletTransfer);
       }
