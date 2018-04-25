@@ -2,4 +2,4 @@
 set(CN_PROJECT_NAME "artowallet")
 set(CN_CURRENCY_DISPLAY_NAME "Arto")
 set(CN_CURRENCY_TICKER "RTO")
-set(CN_VERSION 1.0.1)
+set(CN_VERSION 1.0.2)
