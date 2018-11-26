@@ -1,20 +1,12 @@
-**1. Clone wallet sources**
+**1. Clone wallet sources and the submodule**
 
 ```
-git clone https://github.com/artocash/artowallet.git
+git clone --recursive https://github.com/artocash/artowallet
+
+cd artowallet
 ```
 
-**2. Create git submodule:**
-
-```
-git submodule add https://github.com/artocash/arto.git cryptonote
-```
-
-```
-git submodule add https://github.com/fukuchi/libqrencode.git libqrencode
-```
-
-**3. Build**
+**2. Build**
 
 ```
 mkdir build && cd build && cmake .. && make
