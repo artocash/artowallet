@@ -1,7 +1,6 @@
 // Copyright (c) 2011-2015 The Cryptonote developers
 // Copyright (c) 2015-2016 XDN developers
 // Copyright (c) 2016-2017 The Karbowanec developers
-// Copyright (c) 2018 The Arto developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +14,7 @@
 #include "WalletEvents.h"
 #include <QRegExpValidator>
 #include <QInputDialog>
+#include <QMessageBox>
 #include <QUrlQuery>
 #include <QTime>
 #include <QUrl>
@@ -281,6 +281,15 @@ void SendFrame::sendClicked() {
         return;
       }
 
+      quint64 total_transaction_amount = 0;
+      for (size_t i = 0; i < walletTransfers.size(); i++){
+        total_transaction_amount += walletTransfers.at(i).amount;
+      }
+      if (total_transaction_amount > (WalletAdapter::instance().getActualBalance() - fee)) {
+        QMessageBox::critical(this, tr("Insufficient balance"), tr("Available balance is insufficient to send this transaction. Have you excluded a fee?"), QMessageBox::Ok);
+        return;
+      }
+
       if (WalletAdapter::instance().isOpen()) {
           QByteArray paymentIdString = m_ui->m_paymentIdEdit->text().toUtf8();
           if (!isValidPaymentId(paymentIdString)) {
@@ -326,18 +335,7 @@ bool SendFrame::isValidPaymentId(const QByteArray& _paymentIdString) {
 }
 
 void SendFrame::generatePaymentIdClicked() {
-  QTime time = QTime::currentTime();
-  qsrand((uint)time.msec());
-  const QString possibleCharacters("ABCDEF0123456789");
-  const int randomStringLength = 64;
-  QString randomString;
-  for(int i=0; i<randomStringLength; ++i)
-  {
-    int index = qrand() % possibleCharacters.length();
-    QChar nextChar = possibleCharacters.at(index);
-    randomString.append(nextChar);
-  }
-  SendFrame::insertPaymentID(randomString);
+  SendFrame::insertPaymentID(CurrencyAdapter::instance().generatePaymentId());
 }
 
 }

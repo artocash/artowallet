@@ -1,18 +1,19 @@
 // Copyright (c) 2011-2016 The Cryptonote developers
 // Copyright (c) 2011-2013 The Bitcoin Core developers
 // Copyright (c) 2015-2016 XDN developers
-// Copyright (c) 2016-2017 The Karbowanec developers
-// Copyright (c) 2018 The Arto developers
+// Copyright (c) 2016-2018 The Karbowanec developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QStandardPaths>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSystemTrayIcon>
 #include <QDesktopServices>
 #include <QTimer>
+#include <QDebug>
 #include <QDateTime>
 #include <QFontDatabase>
 #include <Common/Base58.h>
@@ -31,6 +32,7 @@
 #include "CurrencyAdapter.h"
 #include "ExitWidget.h"
 #include "ImportKeyDialog.h"
+#include "RestoreFromMnemonicSeedDialog.h"
 #include "MainWindow.h"
 #include "NewPasswordDialog.h"
 #include "NodeAdapter.h"
@@ -41,10 +43,19 @@
 #include "SendFrame.h"
 #include "InfoDialog.h"
 #include "ui_mainwindow.h"
+#include "MnemonicSeedDialog.h"
 
 #ifdef Q_OS_MAC
 #include "macdockiconhandler.h"
 #endif
+
+#include "mnemonics/electrum-words.h"
+
+extern "C"
+{
+#include "crypto/keccak.h"
+#include "crypto/crypto-ops.h"
+}
 
 namespace WalletGui {
 
@@ -77,8 +88,8 @@ MainWindow::MainWindow() : QMainWindow(), m_ui(new Ui::MainWindow), m_trayIcon(n
 MainWindow::~MainWindow() {
     delete paymentServer;
     paymentServer = 0;
-    if(m_trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
-      m_trayIcon->hide();
+    //if(m_trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
+    //  m_trayIcon->hide();
     #ifdef Q_OS_MAC
       MacDockIconHandler::cleanup();
     #endif
@@ -159,6 +170,11 @@ void MainWindow::initUi() {
     m_remoteModeIconLabel->setPixmap(QPixmap(":icons/remote_mode").scaledToHeight(16, Qt::SmoothTransformation));
   }
 
+  m_ui->m_showMnemonicSeedAction->setEnabled(false);
+
+  m_ui->m_miningOnLaunchAction->setChecked(Settings::instance().isMiningOnLaunchEnabled());
+  m_ui->m_startOnLoginAction->setChecked(Settings::instance().isStartOnLoginEnabled());
+
   m_ui->menuRecent_wallets->setVisible(false);
   QAction* recentWalletAction = 0;
   for(int i = 0; i < maxRecentFiles; ++i){
@@ -178,6 +194,8 @@ void MainWindow::initUi() {
 #ifdef Q_OS_WIN
   m_ui->m_minimizeToTrayAction->setVisible(true);
   m_ui->m_closeToTrayAction->setVisible(true);
+  m_ui->m_minimizeToTrayAction->setChecked(Settings::instance().isMinimizeToTrayEnabled());
+  m_ui->m_closeToTrayAction->setChecked(Settings::instance().isCloseToTrayEnabled());
   toggleHideAction = new QAction(tr("&Show / Hide"), this);
   toggleHideAction->setStatusTip(tr("Show or hide the main window"));
   connect(toggleHideAction, SIGNAL(triggered()), this, SLOT(toggleHidden()));
@@ -203,6 +221,8 @@ void MainWindow::quit() {
     ExitWidget* exitWidget = new ExitWidget(nullptr);
     exitWidget->show();
     m_isAboutToQuit = true;
+    if(m_trayIcon) // Hide tray icon, as deleting will let it linger until quit (on Ubuntu)
+       m_trayIcon->hide();
     close();
   }
 }
@@ -276,7 +296,9 @@ bool MainWindow::event(QEvent* _event) {
 void MainWindow::createWallet() {
   QString filePath = QFileDialog::getSaveFileName(this, tr("New wallet file"),
   #ifdef Q_OS_WIN
-      QApplication::applicationDirPath(),
+      //QApplication::applicationDirPath(),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+
   #else
       QDir::homePath(),
   #endif
@@ -287,26 +309,67 @@ void MainWindow::createWallet() {
       filePath.append(".wallet");
     }
 
-    if (!filePath.isEmpty() && !QFile::exists(filePath)) {
+    if (QFile::exists(filePath)) {
+        QFile::remove(filePath);
+    }
+
+    if (!filePath.isEmpty()) {
       if (WalletAdapter::instance().isOpen()) {
         WalletAdapter::instance().close();
       }
 
       WalletAdapter::instance().setWalletFile(filePath);
-      WalletAdapter::instance().open("");
+      WalletAdapter::instance().createWallet();
+    }
+}
+
+void MainWindow::createNonDeterministicWallet() {
+  QString filePath = QFileDialog::getSaveFileName(this, tr("New wallet file"),
+  #ifdef Q_OS_WIN
+      //QApplication::applicationDirPath(),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
+  #else
+      QDir::homePath(),
+  #endif
+      tr("Wallets (*.wallet)")
+      );
+
+    if (!filePath.isEmpty() && !filePath.endsWith(".wallet")) {
+      filePath.append(".wallet");
+    }
+
+    if (QFile::exists(filePath)) {
+        QFile::remove(filePath);
+    }
+
+    if (!filePath.isEmpty()) {
+      if (WalletAdapter::instance().isOpen()) {
+        WalletAdapter::instance().close();
+      }
+
+      WalletAdapter::instance().setWalletFile(filePath);
+      WalletAdapter::instance().createNonDeterministic();
     }
 }
 
 void MainWindow::openWallet() {
   QString filePath = QFileDialog::getOpenFileName(this, tr("Open .wallet/.keys file"),
 #ifdef Q_OS_WIN
-    QApplication::applicationDirPath(),
+    //QApplication::applicationDirPath(),
+      QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
 #else
     QDir::homePath(),
 #endif
     tr("Wallet (*.wallet *.keys)"));
 
   if (!filePath.isEmpty()) {
+
+    if (QFile::exists(filePath) && (!filePath.endsWith(".keys") && !filePath.endsWith(".wallet") && !filePath.endsWith(".trackingwallet"))) {
+      QMessageBox::warning(this, tr("Wrong wallet file extension"),
+                                 tr("Wrong wallet file extension, wallet file should have \".wallet\", \".keys\" or \".trackingwallet\" extension."), QMessageBox::Ok);
+      return;
+    }
+
     if (WalletAdapter::instance().isOpen()) {
       WalletAdapter::instance().close();
     }
@@ -354,6 +417,8 @@ void MainWindow::importKey() {
       }
       WalletAdapter::instance().setWalletFile(filePath);
       WalletAdapter::instance().createWithKeys(keys);
+    } else {
+      QMessageBox::warning(this, tr("Wallet keys are not valid"), tr("The private keys you entered are not valid."), QMessageBox::Ok);
     }
   }
 }
@@ -366,9 +431,13 @@ void MainWindow::importTrackingKey() {
     if (keyString.isEmpty() || filePath.isEmpty()) {
       return;
     }
+    if (keyString.size() != 256) {
+      QMessageBox::warning(this, tr("Tracking key is not valid"), tr("The tracking key you entered is not valid."), QMessageBox::Ok);
+      return;
+    }
 
-    if (!filePath.endsWith(".trackingwallet")) {
-      filePath.append(".trackingwallet");
+    if (!filePath.endsWith(".wallet")) {
+      filePath.append(".wallet");
     }
 
     CryptoNote::AccountKeys keys;
@@ -394,15 +463,19 @@ void MainWindow::importTrackingKey() {
 
     size_t size;
     if (!Common::fromHex(public_spend_key_string, &public_spend_key_hash, sizeof(public_spend_key_hash), size) || size != sizeof(public_spend_key_hash)) {
+      QMessageBox::warning(this, tr("Key is not valid"), tr("The public spend key you entered is not valid."), QMessageBox::Ok);
       return;
     }
     if (!Common::fromHex(public_view_key_string, &public_view_key_hash, sizeof(public_view_key_hash), size) || size != sizeof(public_view_key_hash)) {
+      QMessageBox::warning(this, tr("Key is not valid"), tr("The public view key you entered is not valid."), QMessageBox::Ok);
       return;
     }
     if (!Common::fromHex(private_spend_key_string, &private_spend_key_hash, sizeof(private_spend_key_hash), size) || size != sizeof(private_spend_key_hash)) {
+      QMessageBox::warning(this, tr("Key is not valid"), tr("The private spend key you entered is not valid."), QMessageBox::Ok);
       return;
     }
     if (!Common::fromHex(private_view_key_string, &private_view_key_hash, sizeof(private_view_key_hash), size) || size != sizeof(private_spend_key_hash)) {
+      QMessageBox::warning(this, tr("Key is not valid"), tr("The private view key you entered is not valid."), QMessageBox::Ok);
       return;
     }
 
@@ -431,7 +504,41 @@ void MainWindow::isTrackingMode() {
   m_ui->m_overviewAction->trigger();
   m_ui->m_sendAction->setEnabled(false);
   m_ui->m_openUriAction->setEnabled(false);
+  m_ui->m_showMnemonicSeedAction->setEnabled(false);
   m_trackingModeIconLabel->show();
+}
+
+void MainWindow::restoreFromMnemonicSeed() {
+  RestoreFromMnemonicSeedDialog dlg(this);
+  if (dlg.exec() == QDialog::Accepted) {
+    QString mnemonicString = dlg.getSeedString().trimmed();
+    QString filePath = dlg.getFilePath();
+    if (mnemonicString.isEmpty() || filePath.isEmpty()) {
+      return;
+    }
+
+    if (!filePath.endsWith(".wallet")) {
+      filePath.append(".wallet");
+    }
+
+    CryptoNote::AccountKeys keys;
+    std::string seed_language = "English";
+    if(Crypto::ElectrumWords::words_to_bytes(mnemonicString.toStdString(), keys.spendSecretKey, seed_language)) {
+      Crypto::secret_key_to_public_key(keys.spendSecretKey,keys.address.spendPublicKey);
+      Crypto::SecretKey second;
+      keccak((uint8_t *)&keys.spendSecretKey, sizeof(Crypto::SecretKey), (uint8_t *)&second, sizeof(Crypto::SecretKey));
+      Crypto::generate_deterministic_keys(keys.address.viewPublicKey,keys.viewSecretKey,second);
+
+      if (WalletAdapter::instance().isOpen()) {
+        WalletAdapter::instance().close();
+      }
+      WalletAdapter::instance().setWalletFile(filePath);
+      WalletAdapter::instance().createWithKeys(keys);
+    } else {
+      QMessageBox::critical(nullptr, tr("Mnemonic seed is not correct"), tr("There must be an error in mnemonic seed. Make sure you entered it correctly."), QMessageBox::Ok);
+      return;
+    }
+  }
 }
 
 void MainWindow::ChangeLanguage() {
@@ -488,7 +595,8 @@ void MainWindow::showStatusInfo() {
 void MainWindow::backupWallet() {
   QString filePath = QFileDialog::getSaveFileName(this, tr("Backup wallet to..."),
   #ifdef Q_OS_WIN
-      QApplication::applicationDirPath(),
+      //QApplication::applicationDirPath(),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation),
   #else
       QDir::homePath(),
   #endif
@@ -521,6 +629,12 @@ void MainWindow::openLogFile() {
 
 void MainWindow::showPrivateKeys() {
   PrivateKeysDialog dlg(this);
+  dlg.walletOpened();
+  dlg.exec();
+}
+
+void MainWindow::showMnemonicSeed() {
+  MnemonicSeedDialog dlg(this);
   dlg.walletOpened();
   dlg.exec();
 }
@@ -599,7 +713,7 @@ void MainWindow::updateRecentActionList(){
         itEnd = maxRecentFiles;
 
     for (int i = 0; i < itEnd; ++i) {
-        QString strippedName = QFileInfo(recentFilePaths.at(i)).fileName();
+        QString strippedName = QFileInfo(recentFilePaths.at(i)).absoluteFilePath();
         recentFileActionList.at(i)->setText(strippedName);
         recentFileActionList.at(i)->setData(recentFilePaths.at(i));
         recentFileActionList.at(i)->setVisible(true);
@@ -620,15 +734,22 @@ void MainWindow::setStartOnLogin(bool _on) {
   m_ui->m_startOnLoginAction->setChecked(Settings::instance().isStartOnLoginEnabled());
 }
 
+void MainWindow::setMiningOnLaunch(bool _on) {
+  Settings::instance().setMiningOnLaunchEnabled(_on);
+  m_ui->m_miningOnLaunchAction->setChecked(Settings::instance().isMiningOnLaunchEnabled());
+}
+
 void MainWindow::setMinimizeToTray(bool _on) {
 #ifdef Q_OS_WIN
   Settings::instance().setMinimizeToTrayEnabled(_on);
+  m_ui->m_minimizeToTrayAction->setChecked(Settings::instance().isMinimizeToTrayEnabled());
 #endif
 }
 
 void MainWindow::setCloseToTray(bool _on) {
 #ifdef Q_OS_WIN
   Settings::instance().setCloseToTrayEnabled(_on);
+  m_ui->m_closeToTrayAction->setChecked(Settings::instance().isCloseToTrayEnabled());
 #endif
 }
 
@@ -703,6 +824,9 @@ void MainWindow::walletOpened(bool _error, const QString& _error_text) {
     m_ui->m_showPrivateKey->setEnabled(true);
     m_ui->m_resetAction->setEnabled(true);
     m_ui->m_openUriAction->setEnabled(true);
+    if(WalletAdapter::instance().isDeterministic()) {
+       m_ui->m_showMnemonicSeedAction->setEnabled(true);
+    }
     encryptedFlagChanged(Settings::instance().isEncrypted());
 
     QList<QAction*> tabActions = m_tabActionGroup->actions();
@@ -722,6 +846,8 @@ void MainWindow::walletOpened(bool _error, const QString& _error_text) {
       isTrackingMode();
     }
 
+    WalletAdapter::instance().autoBackup();
+
   } else {
     walletClosed();
   }
@@ -736,6 +862,7 @@ void MainWindow::walletClosed() {
   m_ui->m_exportTrackingKeyAction->setEnabled(false);
   m_ui->m_showPrivateKey->setEnabled(false);
   m_ui->m_resetAction->setEnabled(false);
+  m_ui->m_showMnemonicSeedAction->setEnabled(false);
   m_ui->m_overviewFrame->hide();
   accountWidget->setVisible(false);
   m_ui->m_receiveFrame->hide();

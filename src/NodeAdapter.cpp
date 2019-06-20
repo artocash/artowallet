@@ -1,6 +1,5 @@
 // Copyright (c) 2011-2015 The Cryptonote developers
 // Copyright (c) 2016-2017 The Karbowanec developers
-// Copyright (c) 2018 The Arto developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +17,7 @@
 #include "LoggerAdapter.h"
 #include "NodeAdapter.h"
 #include "Settings.h"
+#include <boost/program_options/variables_map.hpp>
 
 namespace WalletGui {
 
@@ -136,7 +136,7 @@ bool NodeAdapter::init() {
 
   } else if(connection.compare("local") == 0) {
       QUrl localNodeUrl = QUrl::fromUserInput(QString("127.0.0.1:%1").arg(Settings::instance().getCurrentLocalDaemonPort()));
-      m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, localNodeUrl.host().toStdString(), localNodeUrl.port());
+      m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, LoggerAdapter::instance().getLoggerManager(), localNodeUrl.host().toStdString(), localNodeUrl.port());
       QTimer initTimer;
       initTimer.setInterval(3000);
       initTimer.setSingleShot(true);
@@ -157,7 +157,7 @@ bool NodeAdapter::init() {
 
   } else if(connection.compare("remote") == 0) {
       QUrl remoteNodeUrl = QUrl::fromUserInput(Settings::instance().getCurrentRemoteNode());
-      m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, remoteNodeUrl.host().toStdString(), remoteNodeUrl.port());
+      m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, LoggerAdapter::instance().getLoggerManager(), remoteNodeUrl.host().toStdString(), remoteNodeUrl.port());
       QTimer initTimer;
       initTimer.setInterval(3000);
       initTimer.setSingleShot(true);
@@ -178,7 +178,7 @@ bool NodeAdapter::init() {
 
   } else {
             QUrl localNodeUrl = QUrl::fromUserInput(QString("127.0.0.1:%1").arg(CryptoNote::RPC_DEFAULT_PORT));
-            m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, localNodeUrl.host().toStdString(), localNodeUrl.port());
+            m_node = createRpcNode(CurrencyAdapter::instance().getCurrency(), *this, LoggerAdapter::instance().getLoggerManager(), localNodeUrl.host().toStdString(), localNodeUrl.port());
             QTimer initTimer;
             initTimer.setInterval(3000);
             initTimer.setSingleShot(true);

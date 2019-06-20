@@ -1,6 +1,5 @@
 // Copyright (c) 2011-2015 The Cryptonote developers
 // Copyright (c) 2016 Karbowanec developers
-// Copyright (c) 2018 The Arto developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -48,9 +47,11 @@ public:
   quint16 getCurrentLocalDaemonPort() const;
   QString getCurrentRemoteNode() const;
   QString getCurrentPool() const;
+  quint16 getMiningThreads() const;
 
   bool isEncrypted() const;
   bool isStartOnLoginEnabled() const;
+  bool isMiningOnLaunchEnabled() const;
   bool isTrackingMode() const;
 
 #ifdef Q_OS_WIN
@@ -64,12 +65,14 @@ public:
   void setCurrentTheme(const QString& _theme);
   void setLanguage(const QString& _language);
   void setStartOnLoginEnabled(bool _enable);
+  void setMiningOnLaunchEnabled(bool _enable);
   void setMiningPoolList(const QStringList& _miningPoolList);
   void setConnection(const QString& _connection);
   void setCurrentLocalDaemonPort(const quint16& _daemonPort);
   void setCurrentRemoteNode(const QString& _remoteNode);
   void setRpcNodesList(const QStringList& _RpcNodesList);
   void setCurrentPool(const QString& _pool);
+  void setMiningThreads(const quint16& _threads);
 #ifdef Q_OS_WIN
   void setMinimizeToTrayEnabled(bool _enable);
   void setCloseToTrayEnabled(bool _enable);

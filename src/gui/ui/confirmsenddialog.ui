@@ -14,7 +14,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Comfirm sending %1 RTO</string>
+   <string>Confirm sending %1 RTO</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -22,7 +22,7 @@
      <item>
       <widget class="QLabel" name="m_confirmLabel">
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Are you sure you want to send &lt;span style=&quot; font-weight:600;&quot;&gt;%1 RTO&lt;/span&gt;?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Are you sure you want to send &lt;strong&gt;%1 RTO&lt;/strong&gt;?&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textFormat">
         <enum>Qt::RichText</enum>
@@ -75,7 +75,7 @@
         <string>Yes</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="../../resources.qrc">
          <normaloff>:/icons/transaction</normaloff>:/icons/transaction</iconset>
        </property>
       </widget>
@@ -86,7 +86,7 @@
         <string>Cancel</string>
        </property>
        <property name="icon">
-        <iconset>
+        <iconset resource="../../resources.qrc">
          <normaloff>:/icons/cancel</normaloff>:/icons/cancel</iconset>
        </property>
       </widget>
@@ -95,7 +95,9 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources.qrc"/>
+ </resources>
  <connections>
   <connection>
    <sender>m_okButton</sender>

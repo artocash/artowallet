@@ -1,9 +1,10 @@
 // Copyright (c) 2011-2015 The Cryptonote developers
-// Copyright (c) 2016-2017 The Karbowanec developers
-// Copyright (c) 2018 The Arto developers
+// Copyright (c) 2016-2018 The Karbowanec developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <crypto/crypto.h>
+#include <Common/StringTools.h>
 #include "CurrencyAdapter.h"
 #include "CryptoNoteWalletConfig.h"
 #include "LoggerAdapter.h"
@@ -67,7 +68,7 @@ QString CurrencyAdapter::formatAmount(quint64 _amount) const {
   result.insert(dot_pos, ".");
   for (qint32 pos = dot_pos - 3; pos > 0; pos -= 3) {
     if (result[pos - 1].isDigit()) {
-        result.insert(pos, ',');
+        //result.insert(pos, ',');
     }
   }
 
@@ -118,6 +119,12 @@ CryptoNote::AccountPublicAddress CurrencyAdapter::internalAddress(const QString&
     // Error message
   }
   return internalAddress;
+}
+
+QString CurrencyAdapter::generatePaymentId() const {
+  Crypto::Hash payment_id;
+  payment_id = Crypto::rand<Crypto::Hash>();
+  return QString::fromStdString(Common::podToHex(payment_id));
 }
 
 }

@@ -1,7 +1,6 @@
 // Copyright (c) 2011-2016 The Cryptonote developers
 // Copyright (c) 2015-2016 XDN developers
 // Copyright (c) 2016-2017 The Karbowanec developers
-// Copyright (c) 2018 The Arto developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -87,6 +86,7 @@ private:
   void updateRecentActionList();
 
   Q_SLOT void createWallet();
+  Q_SLOT void createNonDeterministicWallet();
   Q_SLOT void openWallet();
   Q_SLOT void closeWallet();
   Q_SLOT void importKey();
@@ -97,6 +97,7 @@ private:
   Q_SLOT void about();
   Q_SLOT void setStartOnLogin(bool _on);
   Q_SLOT void setMinimizeToTray(bool _on);
+  Q_SLOT void setMiningOnLaunch(bool _on);
   Q_SLOT void setCloseToTray(bool _on);
   Q_SLOT void ChangeLanguage();
   Q_SLOT void showPrivateKeys();
@@ -109,6 +110,8 @@ private:
   Q_SLOT void openLogFile();
   Q_SLOT void toggleHidden();
   Q_SLOT void showNormalIfMinimized(bool fToggleHidden = false);
+  Q_SLOT void showMnemonicSeed();
+  Q_SLOT void restoreFromMnemonicSeed();
 
   bool isObscured(QWidget *w);
   bool checkPoint(const QPoint &p, const QWidget *w);
