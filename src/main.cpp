@@ -1,5 +1,6 @@
 // Copyright (c) 2011-2015 The Cryptonote developers
 // Copyright (c) 2016-2017 The Karbowanec developers
+// Copyright (c) 2018-2019 The Arto developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #include <QApplication>
@@ -10,7 +11,6 @@
 #include <QMessageBox>
 #include <QSplashScreen>
 #include <QStyleFactory>
-#include <QSettings>
 
 #include "CommandLineParser.h"
 #include "CurrencyAdapter.h"
@@ -103,28 +103,6 @@ int main(int argc, char* argv[]) {
     QMessageBox::information(nullptr, QObject::tr("Help"), cmdLineParser.getHelpText());
     return app.exec();
   }
-
-  //Create registry entries for URL execution
-  QSettings artoKey("HKEY_CLASSES_ROOT\\arto", QSettings::NativeFormat);
-  artoKey.setValue(".", "Arto Wallet");
-  artoKey.setValue("URL Protocol", "");
-  QSettings artoOpenKey("HKEY_CLASSES_ROOT\\arto\\shell\\open\\command", QSettings::NativeFormat);
-  artoOpenKey.setValue(".", "\"" + QCoreApplication::applicationFilePath().replace("/", "\\") + "\" \"%1\"");
-#endif
-
-#if defined(Q_OS_LINUX)
-  QStringList args;
-  QProcess exec;
-
-  //as root
-  args << "-c" << "printf '[Desktop Entry]\\nName = Arto URL Handler\\nGenericName = Arto\\nComment = Handle URL Sheme arto://\\nExec = " + QCoreApplication::applicationFilePath() + " %%u\\nTerminal = false\\nType = Application\\nMimeType = x-scheme-handler/arto;\\nIcon = Arto-Wallet' | tee /usr/share/applications/arto-handler.desktop";
-  exec.start("/bin/sh", args);
-  exec.waitForFinished();
-
-  args.clear();
-  args << "-c" << "update-desktop-database";
-  exec.start("/bin/sh", args);
-  exec.waitForFinished();
 #endif
 
   LoggerAdapter::instance().init();
